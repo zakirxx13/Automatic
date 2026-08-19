@@ -1,35 +1,35 @@
-name: Fetch Recent Matches
+name: Update Jamuna TV Stream
 
 on:
   schedule:
-    - cron: '*/30 * * * *'
-  workflow_dispatch:
+    - cron: '*/30 * * * *' # প্রতি ৩০ মিনিট পর পর আপডেট করবে
+  workflow_dispatch: # ম্যানুয়ালি রান করার জন্য
 
 permissions:
   contents: write
 
 jobs:
-  fetch-and-save:
+  fetch-jamuna-stream:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fetch Data from RapidAPI
+      - name: Fetch M3U8 Playlist
         env:
-          API_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          STREAM_URL: 'https://bldcmprod-cdn.toffeelive.com/cdn/live/jamuna_tv/playlist.m3u8'
+          COOKIE_DATA: 'Edge-Cache-Cookie=URLPrefix=aHR0cHM6Ly9ibGRjbXByb2QtY2RuLnRvZmZlZWxpdmUuY29t:Expires=1787336713:KeyName=prod_linear:Signature=tNKyBCHm6G4ZM4bcbfnFAt83AqDNFpSFBJp5Gb639f2goclVHZfGQrgNMY7DWyOQQIZuF9MXFrZJUoVIXaz2Cg'
+          USER_AGENT: 'okhttp/4.11.0'
         run: |
-          curl --request GET \
-            --url 'https://cricbuzz-cricket.p.rapidapi.com/matches/v1/recent' \
-            --header "Content-Type: application/json" \
-            --header "x-rapidapi-host: cricbuzz-cricket.p.rapidapi.com" \
-            --header "x-rapidapi-key: $API_KEY" \
-            --output recent_matches.json
+          curl -s -L \
+            -A "$USER_AGENT" \
+            -b "$COOKIE_DATA" \
+            "$STREAM_URL" -o jamuna_tv.m3u8
 
-      - name: Commit and Push Updated Data
+      - name: Commit and Push Updated File
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add recent_matches.json
-          git commit -m "Auto-update recent matches data" || exit 0
+          git add jamuna_tv.m3u8
+          git commit -m "Auto-update Jamuna TV stream" || exit 0
           git push
