@@ -1,9 +1,9 @@
-name: Update Jamuna TV Stream
+name: Fetch Jamuna TV Stream via BD Proxy
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # প্রতি ৩০ মিনিট পর পর আপডেট করবে
-  workflow_dispatch: # ম্যানুয়ালি রান করার জন্য
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -15,21 +15,24 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Fetch M3U8 Playlist
+      - name: Fetch M3U8 Playlist via Proxy
         env:
           STREAM_URL: 'https://bldcmprod-cdn.toffeelive.com/cdn/live/jamuna_tv/playlist.m3u8'
           COOKIE_DATA: 'Edge-Cache-Cookie=URLPrefix=aHR0cHM6Ly9ibGRjbXByb2QtY2RuLnRvZmZlZWxpdmUuY29t:Expires=1787336713:KeyName=prod_linear:Signature=tNKyBCHm6G4ZM4bcbfnFAt83AqDNFpSFBJp5Gb639f2goclVHZfGQrgNMY7DWyOQQIZuF9MXFrZJUoVIXaz2Cg'
           USER_AGENT: 'okhttp/4.11.0'
+          # বি.দ্র: ফ্রি প্রক্সি সবসময় স্থায়ী থাকে না। সমস্যা হলে কাজ করা প্রক্সি IP পরিবর্তন করতে হবে।
+          BD_PROXY: 'http://103.106.118.10:8080' 
         run: |
           curl -s -L \
+            --proxy "$BD_PROXY" \
             -A "$USER_AGENT" \
             -b "$COOKIE_DATA" \
-            "$STREAM_URL" -o jamuna_tv.m3u8
+            "$STREAM_URL" -o jamuna_tv.m3u8 || exit 1
 
       - name: Commit and Push Updated File
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git add jamuna_tv.m3u8
-          git commit -m "Auto-update Jamuna TV stream" || exit 0
+          git commit -m "Auto-update Jamuna TV stream via Proxy" || exit 0
           git push
