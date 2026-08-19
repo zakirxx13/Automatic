@@ -13,50 +13,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-
-      # -----------------------------
-      # 1. Checkout Repository
-      # -----------------------------
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      # -----------------------------
-      # 2. Check Secrets
-      # -----------------------------
-      - name: Check Configuration
-        env:
-          STREAM_URL: ${{ secrets.STREAM_URL }}
-          COOKIE_DATA: ${{ secrets.COOKIE_DATA }}
-
-        run: |
-          echo "Checking configuration..."
-
-          if [ -z "$STREAM_URL" ]; then
-            echo "ERROR: STREAM_URL secret is empty."
-            exit 1
-          fi
-
-          if [ -z "$COOKIE_DATA" ]; then
-            echo "ERROR: COOKIE_DATA secret is empty."
-            exit 1
-          fi
-
-          echo "STREAM_URL is configured."
-          echo "COOKIE_DATA is configured."
-
-      # -----------------------------
-      # 3. Fetch M3U8
-      # -----------------------------
-      - name: Fetch Jamuna TV M3U8
-        env:
-          STREAM_URL: ${{ secrets.STREAM_URL }}
-          COOKIE_DATA: ${{ secrets.COOKIE_DATA }}
-          USER_AGENT: okhttp/4.11.0
-
+      - name: Fetch M3U8 Playlist
         run: |
           set -e
 
-          echo "Fetching Jamuna TV playlist..."
+          STREAM_URL="https://YOUR-AUTHORIZED-DOMAIN/example/playlist.m3u8"
+          USER_AGENT="okhttp/4.11.0"
+
+          echo "Fetching playlist..."
 
           HTTP_CODE=$(curl -L \
             --retry 3 \
@@ -64,7 +31,6 @@ jobs:
             --connect-timeout 15 \
             --max-time 60 \
             -A "$USER_AGENT" \
-            -H "Cookie: $COOKIE_DATA" \
             -o jamuna_tv.m3u8 \
             -w "%{http_code}" \
             "$STREAM_URL")
@@ -72,41 +38,29 @@ jobs:
           echo "HTTP Status: $HTTP_CODE"
 
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: Stream request failed."
-            echo "HTTP Status: $HTTP_CODE"
+            echo "ERROR: Request failed."
             exit 1
           fi
 
           if [ ! -s jamuna_tv.m3u8 ]; then
-            echo "ERROR: jamuna_tv.m3u8 is empty."
+            echo "ERROR: Playlist is empty."
             exit 1
           fi
 
           echo "Playlist downloaded successfully."
 
-          echo "File information:"
-          ls -lh jamuna_tv.m3u8
-
-          echo "Playlist preview:"
           head -n 5 jamuna_tv.m3u8
 
-      # -----------------------------
-      # 4. Validate M3U8
-      # -----------------------------
       - name: Validate M3U8
         run: |
           if grep -q "#EXTM3U" jamuna_tv.m3u8; then
-            echo "Valid M3U8 playlist detected."
+            echo "Valid M3U8 detected."
           else
-            echo "WARNING: #EXTM3U was not found."
-            echo "Downloaded content preview:"
-            head -n 20 jamuna_tv.m3u8
+            echo "Invalid M3U8 response."
+            exit 1
           fi
 
-      # -----------------------------
-      # 5. Commit Changes
-      # -----------------------------
-      - name: Commit Updated Playlist
+      - name: Commit and Push
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -118,5 +72,5 @@ jobs:
             exit 0
           fi
 
-          git commit -m "Auto-update Jamuna TV stream"
+          git commit -m "Auto-update stream"
           git push
