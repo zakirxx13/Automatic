@@ -1,9 +1,9 @@
-.name: Fetch Sports Data
+name: Fetch Sports Data
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # প্রতি ৩০ মিনিট পর পর স্ক্রিপ্টটি চলবে
-  workflow_dispatch: # ম্যানুয়ালি রান করার জন্য
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
 
 jobs:
   fetch-and-save:
