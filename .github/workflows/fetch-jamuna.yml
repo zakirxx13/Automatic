@@ -1,0 +1,86 @@
+name: Fetch Jamuna TV Stream
+
+on:
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch-jamuna-stream:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Fetch M3U8 Playlist
+        env:
+          STREAM_URL: ${{ secrets.STREAM_URL }}
+          COOKIE_DATA: ${{ secrets.COOKIE_DATA }}
+          USER_AGENT: 'okhttp/4.11.0'
+
+        run: |
+          set -e
+
+          echo "Checking configuration..."
+
+          if [ -z "$STREAM_URL" ]; then
+            echo "ERROR: STREAM_URL secret is empty"
+            exit 1
+          fi
+
+          if [ -z "$COOKIE_DATA" ]; then
+            echo "ERROR: COOKIE_DATA secret is empty"
+            exit 1
+          fi
+
+          echo "Fetching playlist..."
+
+          HTTP_CODE=$(curl -L \
+            --retry 3 \
+            --retry-delay 5 \
+            --connect-timeout 15 \
+            --max-time 60 \
+            -A "$USER_AGENT" \
+            -H "Cookie: $COOKIE_DATA" \
+            -o jamuna_tv.m3u8 \
+            -w "%{http_code}" \
+            "$STREAM_URL")
+
+          echo "HTTP Status: $HTTP_CODE"
+
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "ERROR: Playlist request failed."
+            exit 1
+          fi
+
+          if [ ! -s jamuna_tv.m3u8 ]; then
+            echo "ERROR: Playlist file is empty."
+            exit 1
+          fi
+
+          echo "Playlist fetched successfully."
+
+          echo "File size:"
+          wc -c jamuna_tv.m3u8
+
+          echo "Playlist preview:"
+          head -n 5 jamuna_tv.m3u8
+
+      - name: Commit and Push Updated File
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add jamuna_tv.m3u8
+
+          if git diff --cached --quiet; then
+            echo "No changes detected."
+            exit 0
+          fi
+
+          git commit -m "Auto-update Jamuna TV stream"
+          git push
