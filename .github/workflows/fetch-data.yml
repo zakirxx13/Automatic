@@ -5,12 +5,15 @@ on:
     - cron: '*/30 * * * *'
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   fetch-and-save:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Fetch Data from RapidAPI
         env:
