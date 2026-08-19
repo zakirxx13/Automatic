@@ -1,4 +1,4 @@
-name: Fetch Sports Data
+name: Fetch Recent Matches
 
 on:
   schedule:
@@ -20,16 +20,16 @@ jobs:
           API_KEY: ${{ secrets.RAPIDAPI_KEY }}
         run: |
           curl --request GET \
-            --url 'https://cricbuzz-cricket.p.rapidapi.com/mcenter/v1/41881/overs' \
+            --url 'https://cricbuzz-cricket.p.rapidapi.com/matches/v1/recent' \
             --header "Content-Type: application/json" \
             --header "x-rapidapi-host: cricbuzz-cricket.p.rapidapi.com" \
             --header "x-rapidapi-key: $API_KEY" \
-            --output data.json
+            --output recent_matches.json
 
       - name: Commit and Push Updated Data
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add data.json
-          git commit -m "Auto-update sports data" || exit 0
+          git add recent_matches.json
+          git commit -m "Auto-update recent matches data" || exit 0
           git push
