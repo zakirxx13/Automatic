@@ -10,22 +10,40 @@ permissions:
 
 jobs:
   fetch-jamuna-stream:
+
     runs-on: ubuntu-latest
 
     steps:
+
+      # ==========================
+      # 1. Checkout Repository
+      # ==========================
       - name: Checkout Repository
         uses: actions/checkout@v5
 
-      - name: Fetch M3U8 Playlist
+      # ==========================
+      # 2. Fetch Jamuna TV M3U8
+      # ==========================
+      - name: Fetch Jamuna TV Playlist
         run: |
+
           set -e
 
-          STREAM_URL="https://YOUR-AUTHORIZED-DOMAIN/example/playlist.m3u8"
+          STREAM_URL="https://bldcmprod-cdn.toffeelive.com/cdn/live/jamuna_tv/playlist.m3u8"
+
           USER_AGENT="okhttp/4.11.0"
 
-          echo "Fetching playlist..."
+          echo "======================================"
+          echo "Fetching Jamuna TV M3U8"
+          echo "======================================"
 
-          HTTP_CODE=$(curl -L \
+          rm -f jamuna_tv.m3u8
+
+          HTTP_CODE=$(curl \
+            -L \
+            --fail \
+            --silent \
+            --show-error \
             --retry 3 \
             --retry-delay 5 \
             --connect-timeout 15 \
@@ -35,42 +53,107 @@ jobs:
             -w "%{http_code}" \
             "$STREAM_URL")
 
+          echo ""
           echo "HTTP Status: $HTTP_CODE"
 
+          # ==========================
+          # Check HTTP Status
+          # ==========================
+
           if [ "$HTTP_CODE" != "200" ]; then
-            echo "ERROR: Request failed."
+
+            echo ""
+            echo "ERROR: Failed to download playlist."
+            echo "HTTP Status: $HTTP_CODE"
+
             exit 1
+
+          fi
+
+          # ==========================
+          # Check File
+          # ==========================
+
+          if [ ! -f jamuna_tv.m3u8 ]; then
+
+            echo "ERROR: jamuna_tv.m3u8 was not created."
+
+            exit 1
+
           fi
 
           if [ ! -s jamuna_tv.m3u8 ]; then
-            echo "ERROR: Playlist is empty."
+
+            echo "ERROR: jamuna_tv.m3u8 is empty."
+
             exit 1
+
           fi
 
+          echo ""
           echo "Playlist downloaded successfully."
 
-          head -n 5 jamuna_tv.m3u8
+          echo ""
+          echo "File information:"
+          ls -lh jamuna_tv.m3u8
 
-      - name: Validate M3U8
-        run: |
+          # ==========================
+          # Validate M3U8
+          # ==========================
+
+          echo ""
+          echo "Checking M3U8 format..."
+
           if grep -q "#EXTM3U" jamuna_tv.m3u8; then
-            echo "Valid M3U8 detected."
+
+            echo "Valid M3U8 playlist."
+
           else
-            echo "Invalid M3U8 response."
+
+            echo "WARNING: #EXTM3U not found."
+
+            echo ""
+            echo "First 20 lines:"
+            head -n 20 jamuna_tv.m3u8
+
             exit 1
+
           fi
 
-      - name: Commit and Push
+          # ==========================
+          # Preview
+          # ==========================
+
+          echo ""
+          echo "Playlist preview:"
+          head -n 10 jamuna_tv.m3u8
+
+      # ==========================
+      # 3. Commit Changes
+      # ==========================
+      - name: Commit Updated Playlist
         run: |
+
+          set -e
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
           git add jamuna_tv.m3u8
 
           if git diff --cached --quiet; then
+
             echo "No changes detected."
+
             exit 0
+
           fi
 
-          git commit -m "Auto-update stream"
+          git commit -m "Auto-update Jamuna TV playlist"
+
           git push
+
+          echo ""
+          echo "======================================"
+          echo "Playlist updated successfully."
+          echo "======================================"
